@@ -50,7 +50,6 @@ from tools.response_file import substitute_response_files
 from tools.minimal_runtime_shell import generate_minimal_runtime_html
 import tools.line_endings
 from tools import feature_matrix
-from tools import deps_info
 from tools import js_manipulation
 from tools import wasm2c
 from tools import webassembly
@@ -1336,9 +1335,14 @@ There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR P
   js_syms = {}
   if not settings.SIDE_MODULE:
     js_syms = get_all_js_syms()
-    deps_info.append_deps_info(js_syms)
+    if not settings.USES_DYNAMIC_ALLOC:
+      for value in js_syms.values():
+        if 'malloc' in value:
+          value.remove('malloc')
+        if 'free' in value:
+          value.remove('free')
 
-  phase_calculate_system_libraries(state, linker_arguments, linker_inputs, newargs)
+  phase_calculate_system_libraries(state, linker_arguments, newargs)
 
   phase_link(linker_arguments, wasm_target, js_syms)
 
@@ -2092,11 +2096,6 @@ def phase_linker_setup(options, state, newargs):
     if settings.MAIN_MODULE == 1:
       settings.INCLUDE_FULL_LIBRARY = 1
     settings.DEFAULT_LIBRARY_FUNCS_TO_INCLUDE += ['$loadDylibs']
-
-  # If we are including the entire JS library then we know for sure we will, by definition,
-  # require all the reverse dependencies.
-  if settings.INCLUDE_FULL_LIBRARY:
-    default_setting('REVERSE_DEPS', 'all')
 
   if settings.MAIN_MODULE == 1 or settings.SIDE_MODULE == 1:
     settings.LINKABLE = 1
@@ -3082,14 +3081,13 @@ def phase_compile_inputs(options, state, newargs, input_files):
 
 
 @ToolchainProfiler.profile_block('calculate system libraries')
-def phase_calculate_system_libraries(state, linker_arguments, linker_inputs, newargs):
+def phase_calculate_system_libraries(state, linker_arguments, newargs):
   extra_files_to_link = []
   # Link in ports and system libraries, if necessary
   if not settings.SIDE_MODULE:
     # Ports are always linked into the main module, never the side module.
     extra_files_to_link += ports.get_libs(settings)
-  all_linker_inputs = [f for _, f in sorted(linker_inputs)] + extra_files_to_link
-  extra_files_to_link += system_libs.calculate(all_linker_inputs, newargs, forced=state.forced_stdlibs)
+  extra_files_to_link += system_libs.calculate(newargs, forced=state.forced_stdlibs)
   linker_arguments.extend(extra_files_to_link)
 
 

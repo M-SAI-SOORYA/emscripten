@@ -3018,7 +3018,7 @@ var LibraryOpenAL = {
   },
 
   alGetString__proxy: 'sync',
-  alGetString__deps: ['$allocateUTF8'],
+  alGetString__deps: ['$allocateUTF8', 'malloc'],
   alGetString: function(param) {
     if (AL.stringCache[param]) {
       return AL.stringCache[param];

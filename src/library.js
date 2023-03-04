@@ -569,7 +569,7 @@ mergeInto(LibraryManager.library, {
 
   // TODO: Initialize these to defaults on startup from system settings.
   // Note: glibc has one fewer underscore for all of these. Also used in other related functions (timegm)
-  _tzset_js__deps: ['$allocateUTF8'],
+  _tzset_js__deps: ['$allocateUTF8', 'malloc'],
   _tzset_js__internal: true,
   _tzset_js: function(timezone, daylight, tzname) {
     // TODO: Use (malleable) environment variables instead of system settings.
@@ -1212,6 +1212,7 @@ mergeInto(LibraryManager.library, {
   // ==========================================================================
 
 #if SUPPORT_LONGJMP == 'emscripten'
+  _emscripten_throw_longjmp__deps: ['setThrew'],
   _emscripten_throw_longjmp: function() {
 #if EXCEPTION_STACK_TRACES
     throw new EmscriptenSjLj;
@@ -1721,7 +1722,7 @@ mergeInto(LibraryManager.library, {
     return { family: family, addr: addr, port: port };
   },
   $writeSockaddr__docs: '/** @param {number=} addrlen */',
-  $writeSockaddr__deps: ['$Sockets', '$inetPton4', '$inetPton6', '$zeroMemory'],
+  $writeSockaddr__deps: ['$Sockets', '$inetPton4', '$inetPton6', '$zeroMemory', 'htons'],
   $writeSockaddr: function (sa, family, addr, port, addrlen) {
     switch (family) {
       case {{{ cDefs.AF_INET }}}:
@@ -1858,7 +1859,7 @@ mergeInto(LibraryManager.library, {
     return 0;
   },
 
-  getaddrinfo__deps: ['$Sockets', '$DNS', '$inetPton4', '$inetNtop4', '$inetPton6', '$inetNtop6', '$writeSockaddr'],
+  getaddrinfo__deps: ['$Sockets', '$DNS', '$inetPton4', '$inetNtop4', '$inetPton6', '$inetNtop6', '$writeSockaddr', 'malloc', 'htonl'],
   getaddrinfo__proxy: 'sync',
   getaddrinfo: function(node, service, hint, out) {
     // Note getaddrinfo currently only returns a single addrinfo with ai_next defaulting to NULL. When NULL
@@ -2307,6 +2308,7 @@ mergeInto(LibraryManager.library, {
   // Mark as `noleakcheck` otherwise lsan will report the last returned string
   // as a leak.
   emscripten_run_script_string__noleakcheck: true,
+  emscripten_run_script_string__deps: ['malloc', 'free'],
   emscripten_run_script_string: function(ptr) {
     {{{ makeEval("var s = eval(UTF8ToString(ptr));") }}}
     if (s == null) {
@@ -2622,7 +2624,7 @@ mergeInto(LibraryManager.library, {
   // using builtin_malloc to avoid LSan reporting these as leaks.
   emscripten_get_compiler_setting__noleakcheck: true,
 #if RETAIN_COMPILER_SETTINGS
-  emscripten_get_compiler_setting__deps: ['$allocateUTF8'],
+  emscripten_get_compiler_setting__deps: ['$allocateUTF8', 'malloc'],
 #endif
   emscripten_get_compiler_setting: function(name) {
 #if RETAIN_COMPILER_SETTINGS
@@ -2803,7 +2805,7 @@ mergeInto(LibraryManager.library, {
 
   // Look up the function name from our stack frame cache with our PC representation.
 #if USE_OFFSET_CONVERTER
-  emscripten_pc_get_function__deps: ['$UNWIND_CACHE', 'free', '$allocateUTF8'],
+  emscripten_pc_get_function__deps: ['$UNWIND_CACHE', 'free', 'malloc', '$allocateUTF8'],
   // Don't treat allocation of _emscripten_pc_get_function.ret as a leak
   emscripten_pc_get_function__noleakcheck: true,
 #endif
